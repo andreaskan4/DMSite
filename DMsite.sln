@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36518.9 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DMsite", "DMsite.csproj", "{1D47B658-B8A9-4427-8A29-A887F97F2127}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1D47B658-B8A9-4427-8A29-A887F97F2127}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D47B658-B8A9-4427-8A29-A887F97F2127}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D47B658-B8A9-4427-8A29-A887F97F2127}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D47B658-B8A9-4427-8A29-A887F97F2127}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9CDD28B3-9E62-44C7-A139-0FDD1FC4BDC9}
+	EndGlobalSection
+EndGlobal

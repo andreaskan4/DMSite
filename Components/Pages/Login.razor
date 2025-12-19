@@ -1,0 +1,44 @@
+﻿@page "/login"
+@inject DMsite.Services.AuthService Auth
+@inject NavigationManager Nav
+@using System.ComponentModel.DataAnnotations
+
+<h1>Login</h1>
+
+<EditForm Model="model" OnValidSubmit="HandleLogin">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <InputText @bind-Value="model.Email" placeholder="Email" />
+    <InputText type="password" @bind-Value="model.Password" placeholder="Password" />
+
+    <button class="btn primary">Login</button>
+</EditForm>
+
+@if (error != null)
+{
+    <p style="color:red">@error</p>
+}
+
+@code {
+    private LoginModel model = new();
+    private string? error;
+
+    private async Task HandleLogin()
+    {
+        var success = await Auth.Login(model.Email, model.Password);
+        if (!success)
+        {
+            error = "Invalid email or password";
+            return;
+        }
+
+        Nav.NavigateTo("/services");
+    }
+
+    class LoginModel
+    {
+        [Required, EmailAddress] public string Email { get; set; } = "";
+        [Required] public string Password { get; set; } = "";
+    }
+}

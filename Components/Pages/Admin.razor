@@ -1,0 +1,85 @@
+﻿@page "/admin"
+@inject AuthService Auth
+@inject SupabaseService Supabase
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+
+<h1>Admin Dashboard</h1>
+
+@if (!isAuthorized)
+{
+    <p>You are not authorized to view this page.</p>
+}
+else if (services == null)
+{
+    <p>Loading services...</p>
+}
+else
+{
+    <button class="btn primary" @onclick="AddService">Add New Service</button>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Duration</th>
+                <th>Price</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var s in services)
+            {
+                <tr>
+                    <td>@s.Name</td>
+                    <td>@s.Duration</td>
+                    <td>@s.Price</td>
+                    <td>@s.Description</td>
+                    <td>
+                        <button class="btn secondary" @onclick="@(() => EditService(s))">Edit</button>
+                        <button class="btn danger" @onclick="@(() => DeleteService(s))">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private bool isAuthorized = false;
+    private List<Service>? services;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var role = await Auth.GetUserRole();
+        if (role != "admin")
+        {
+            isAuthorized = false;
+            return;
+        }
+        isAuthorized = true;
+
+        services = await Supabase.GetServicesAsync();
+    }
+
+    private void AddService()
+    {
+        Nav.NavigateTo("/admin/service/new");
+    }
+
+    private void EditService(Service s)
+    {
+        Nav.NavigateTo($"/admin/service/edit/{s.Id}");
+    }
+
+    private async Task DeleteService(Service s)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete {s.Name}?");
+        if (!confirmed) return;
+
+        await Supabase.DeleteServiceAsync(s.Id);
+        services = await Supabase.GetServicesAsync();
+    }
+}

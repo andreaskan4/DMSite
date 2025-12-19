@@ -1,0 +1,50 @@
+﻿@page "/"
+
+<div class="home-container">
+    <h1>PhysioCare</h1>
+    <p class="subtitle">Professional Physiotherapy Services</p>
+
+    <div class="buttons">
+        <a class="btn primary" href="/services">ENTER</a>
+        <a class="btn secondary" href="/login">LOGIN</a>
+        <a class="btn secondary" href="/register">REGISTER</a>
+    </div>
+</div>
+
+<style>
+    .home-container {
+        height: 80vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+
+    .subtitle {
+        margin-bottom: 2rem;
+        color: gray;
+    }
+
+    .buttons {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .primary {
+        background: #0078d4;
+        color: white;
+    }
+
+    .secondary {
+        border: 2px solid #0078d4;
+        color: #0078d4;
+    }
+</style>

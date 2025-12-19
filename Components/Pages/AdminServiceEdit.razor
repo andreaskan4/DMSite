@@ -1,0 +1,55 @@
+﻿@page "/admin/service/{Mode}/{Id:long?}"
+@inject SupabaseService Supabase
+@inject NavigationManager Nav
+
+<h1>@(Mode == "new" ? "Add New Service" : "Edit Service")</h1>
+
+<EditForm Model="service" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group">
+        <label>Name</label>
+        <InputText @bind-Value="service.Name" class="form-control" />
+    </div>
+    <div class="form-group">
+        <label>Duration</label>
+        <InputText @bind-Value="service.Duration" class="form-control" />
+    </div>
+    <div class="form-group">
+        <label>Price</label>
+        <InputNumber @bind-Value="service.Price" class="form-control" />
+    </div>
+    <div class="form-group">
+        <label>Description</label>
+        <InputTextArea @bind-Value="service.Description" class="form-control" />
+    </div>
+
+    <button type="submit" class="btn primary">Save</button>
+</EditForm>
+
+@code {
+    [Parameter] public string Mode { get; set; } = "new";
+    [Parameter] public long? Id { get; set; }
+
+    private Service service = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Mode == "edit" && Id.HasValue)
+        {
+            var allServices = await Supabase.GetServicesAsync();
+            service = allServices.First(s => s.Id == Id.Value);
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (Mode == "new")
+            await Supabase.CreateServiceAsync(service);
+        else
+            await Supabase.UpdateServiceAsync(service);
+
+        Nav.NavigateTo("/admin");
+    }
+}

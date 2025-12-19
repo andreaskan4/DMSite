@@ -1,0 +1,34 @@
+﻿@page "/services/{Id:long}"
+@inject SupabaseService Supabase
+
+@if (service == null)
+{
+    <p>Loading service...</p>
+}
+else
+{
+    <h1>@service.Name</h1>
+
+    <p><strong>Duration:</strong> @service.Duration</p>
+    <p><strong>Price:</strong> @service.Price €</p>
+
+    @if (!string.IsNullOrWhiteSpace(service.Description))
+    {
+        <p>@service.Description</p>
+    }
+
+    <a href="/services">← Back to Services</a>
+}
+
+@code {
+    [Parameter]
+    public long Id { get; set; }
+
+    private Service? service;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var services = await Supabase.GetServicesAsync();
+        service = services.FirstOrDefault(s => s.Id == Id);
+    }
+}

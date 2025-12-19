@@ -1,0 +1,54 @@
+﻿@page "/register"
+@inject DMsite.Services.AuthService Auth
+@inject NavigationManager Nav
+@using System.ComponentModel.DataAnnotations
+
+<h1>Register</h1>
+
+<EditForm Model="model" OnValidSubmit="HandleRegister">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <InputText @bind-Value="model.FullName" placeholder="Full Name" />
+    <InputText @bind-Value="model.Email" placeholder="Email" />
+    <InputText type="password" @bind-Value="model.Password" placeholder="Password" />
+    <InputText type="password" @bind-Value="model.ConfirmPassword" placeholder="Confirm Password" />
+
+    <button class="btn primary">Register</button>
+</EditForm>
+
+@if (error != null)
+{
+    <p style="color:red">@error</p>
+}
+
+@code {
+    private RegisterModel model = new();
+    private string? error;
+
+    private async Task HandleRegister()
+    {
+        if (model.Password != model.ConfirmPassword)
+        {
+            error = "Passwords do not match";
+            return;
+        }
+
+        var success = await Auth.Register(model.Email, model.Password, model.FullName);
+        if (!success)
+        {
+            error = "Registration failed. Check console for details.";
+            return;
+        }
+
+        Nav.NavigateTo("/services");
+    }
+
+    class RegisterModel
+    {
+        [Required] public string FullName { get; set; } = "";
+        [Required, EmailAddress] public string Email { get; set; } = "";
+        [Required, MinLength(6)] public string Password { get; set; } = "";
+        [Required, Compare(nameof(Password))] public string ConfirmPassword { get; set; } = "";
+    }
+}
