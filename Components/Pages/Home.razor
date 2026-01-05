@@ -1,50 +1,143 @@
 ﻿@page "/"
+@using DMsite.Models
+@using DMsite.Services
+@inject SupabaseService Supabase
+@inject NavigationManager Nav
 
-<div class="home-container">
-    <h1>PhysioCare</h1>
-    <p class="subtitle">Professional Physiotherapy Services</p>
+<PageTitle>Physio Center - Αρχική</PageTitle>
 
-    <div class="buttons">
-        <a class="btn primary" href="/services">ENTER</a>
-        <a class="btn secondary" href="/login">LOGIN</a>
-        <a class="btn secondary" href="/register">REGISTER</a>
+@* --- HERO SECTION --- *@
+<div class="hero-section text-center text-white mb-5 position-relative">
+    <div class="hero-overlay p-5 d-flex flex-column justify-content-center align-items-center">
+        <h1 class="display-4 fw-bold mb-3">Καλώς ήρθατε στο Physio Center</h1>
+        <p class="lead mb-4" style="max-width: 700px;">
+            Εξειδικευμένες υπηρεσίες φυσικοθεραπείας για άμεση αποκατάσταση και ευεξία.
+            Φροντίζουμε την υγεία σας με σύγχρονες μεθόδους και προσωπική προσοχή.
+        </p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <button class="btn btn-primary btn-lg px-4" @onclick='() => Nav.NavigateTo("/services")'>Δείτε τις Υπηρεσίες</button>
+            <button class="btn btn-outline-light btn-lg px-4" @onclick='() => Nav.NavigateTo("/contact")'>Επικοινωνία</button>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+
+    @if (latestAnnouncement != null)
+    {
+        <div class="alert alert-info shadow-sm d-flex align-items-center mb-5" role="alert">
+            <i class="bi bi-megaphone-fill fs-4 me-3"></i>
+            <div>
+                <strong>Νέα Ανακοίνωση: @latestAnnouncement.Title</strong>
+                <span class="d-block text-muted small">@latestAnnouncement.Content</span>
+            </div>
+            <a href="announcements" class="ms-auto btn btn-sm btn-info text-white">Όλες οι ανακοινώσεις</a>
+        </div>
+    }
+
+    <div class="row align-items-center mb-5 py-4">
+        <div class="col-md-6 mb-4 mb-md-0">
+            <h2 class="text-primary fw-bold">Σχετικά με εμάς</h2>
+            <hr class="w-25 text-primary mb-4" style="height: 3px; opacity: 1;">
+            <p class="text-muted">
+                Στο Physio Center, στόχος μας είναι η ταχεία και ασφαλής αποκατάσταση των ασθενών μας.
+                Διαθέτουμε πολυετή εμπειρία στην αντιμετώπιση μυοσκελετικών και αθλητικών κακώσεων.
+            </p>
+            <ul class="list-unstyled">
+                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Εξατομικευμένα προγράμματα θεραπείας</li>
+                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Σύγχρονος εξοπλισμός</li>
+                <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i> Συνεχής υποστήριξη</li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
+                 class="img-fluid rounded-3 shadow-lg"
+                 alt="Physiotherapy Session" />
+        </div>
+    </div>
+
+    <div class="text-center mb-5 mt-5">
+        <h2 class="fw-bold">Οι Υπηρεσίες μας</h2>
+        <p class="text-muted">Παρέχουμε υψηλού επιπέδου φροντίδα για κάθε σας ανάγκη.</p>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm text-center p-4 hover-card">
+                <div class="mb-3 text-primary">
+                    <i class="bi bi-heart-pulse" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="card-title">Θεραπευτική Μάλαξη</h4>
+                <p class="card-text text-muted">Ανακούφιση από πόνους και μυϊκή χαλάρωση με εξειδικευμένες τεχνικές.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm text-center p-4 hover-card">
+                <div class="mb-3 text-success">
+                    <i class="bi bi-activity" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="card-title">Αποκατάσταση</h4>
+                <p class="card-text text-muted">Πλήρης μετεγχειρητική αποκατάσταση και ενδυνάμωση για γρήγορη επιστροφή στην καθημερινότητα.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm text-center p-4 hover-card">
+                <div class="mb-3 text-info">
+                    <i class="bi bi-person-lines-fill" style="font-size: 3rem;"></i>
+                </div>
+                <h4 class="card-title">Personal Training</h4>
+                <p class="card-text text-muted">Εξατομικευμένη άσκηση υπό την καθοδήγηση φυσικοθεραπευτή για ασφαλή αποτελέσματα.</p>
+            </div>
+        </div>
     </div>
 </div>
 
 <style>
-    .home-container {
-        height: 80vh;
+    .hero-section {
+        background: url('https://images.unsplash.com/photo-1666214280557-f1b5022eb634?q=80&w=1920&auto=format&fit=crop') no-repeat center center;
+        background-size: cover;
+        min-height: 500px;
         display: flex;
-        flex-direction: column;
-        justify-content: center;
         align-items: center;
-        text-align: center;
+        justify-content: center;
+        border-radius: 0 0 20px 20px;
     }
 
-    .subtitle {
-        margin-bottom: 2rem;
-        color: gray;
+    .hero-overlay {
+        background: rgba(0, 0, 0, 0.6); /* Dark overlay text readability */
+        border-radius: 15px;
+        width: 100%;
+        height: 100%;
+        min-height: 500px;
+        border-bottom-left-radius: 20px;
+        border-bottom-right-radius: 20px;
     }
 
-    .buttons {
-        display: flex;
-        gap: 1rem;
+    .hover-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
-    .btn {
-        padding: 12px 24px;
-        border-radius: 6px;
-        text-decoration: none;
-        font-weight: 600;
-    }
-
-    .primary {
-        background: #0078d4;
-        color: white;
-    }
-
-    .secondary {
-        border: 2px solid #0078d4;
-        color: #0078d4;
-    }
+        .hover-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+        }
 </style>
+
+@code {
+    private Announcement? latestAnnouncement;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Φόρτωση ανακοινώσεων για να δείξουμε την πιο πρόσφατη
+            var announcements = await Supabase.GetAnnouncementsAsync();
+            latestAnnouncement = announcements.OrderByDescending(a => a.CreatedAt).FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching announcements: {ex.Message}");
+            // Αν αποτύχει, απλά δεν δείχνουμε τίποτα, η σελίδα συνεχίζει να λειτουργεί
+        }
+    }
+}

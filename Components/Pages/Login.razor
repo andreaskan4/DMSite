@@ -3,22 +3,38 @@
 @inject NavigationManager Nav
 @using System.ComponentModel.DataAnnotations
 
-<h1>Login</h1>
+<div class="container mt-5" style="max-width: 400px;">
+    <h2 class="mb-4 text-center">Σύνδεση</h2>
 
-<EditForm Model="model" OnValidSubmit="HandleLogin">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+    <EditForm Model="model" OnValidSubmit="HandleLogin">
+        <DataAnnotationsValidator />
 
-    <InputText @bind-Value="model.Email" placeholder="Email" />
-    <InputText type="password" @bind-Value="model.Password" placeholder="Password" />
+        <div class="mb-3">
+            <label class="form-label">Email</label>
+            <InputText @bind-Value="model.Email" class="form-control" placeholder="name@example.com" />
+            <ValidationMessage For="@(() => model.Email)" />
+        </div>
 
-    <button class="btn primary">Login</button>
-</EditForm>
+        <div class="mb-3">
+            <label class="form-label">Κωδικός</label>
+            <InputText type="password" @bind-Value="model.Password" class="form-control" placeholder="Password" />
+            <ValidationMessage For="@(() => model.Password)" />
+        </div>
 
-@if (error != null)
-{
-    <p style="color:red">@error</p>
-}
+        <button type="submit" class="btn btn-primary w-100 mb-3">Είσοδος</button>
+
+        <div class="text-center">
+            <small>Δεν έχεις λογαριασμό; <a href="/register">Εγγραφή εδώ</a></small>
+        </div>
+    </EditForm>
+
+    @if (error != null)
+    {
+        <div class="alert alert-danger mt-3">
+            @error
+        </div>
+    }
+</div>
 
 @code {
     private LoginModel model = new();
@@ -26,19 +42,27 @@
 
     private async Task HandleLogin()
     {
-        var success = await Auth.Login(model.Email, model.Password);
-        if (!success)
+        error = null;
+        var result = await Auth.Login(model.Email, model.Password);
+
+        if (!result.IsSuccess)
         {
-            error = "Invalid email or password";
+            error = result.Error;
             return;
         }
 
-        Nav.NavigateTo("/services");
+        var role = await Auth.GetUserRole();
+        if (role == "admin") Nav.NavigateTo("/admin");
+        else Nav.NavigateTo("/");
     }
 
     class LoginModel
     {
-        [Required, EmailAddress] public string Email { get; set; } = "";
-        [Required] public string Password { get; set; } = "";
+        [Required(ErrorMessage = "Το Email είναι υποχρεωτικό.")]
+        [EmailAddress(ErrorMessage = "Μη έγκυρη μορφή Email.")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Ο κωδικός είναι υποχρεωτικός.")]
+        public string Password { get; set; } = "";
     }
 }

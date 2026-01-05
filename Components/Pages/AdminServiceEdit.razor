@@ -1,55 +1,69 @@
-﻿@page "/admin/service/{Mode}/{Id:long?}"
+﻿@page "/admin/service/new"
+@page "/admin/service/edit/{Id:long}"
 @inject SupabaseService Supabase
 @inject NavigationManager Nav
+@inject AuthService Auth
 
-<h1>@(Mode == "new" ? "Add New Service" : "Edit Service")</h1>
+<h3>@(Id == 0 ? "New Service" : "Edit Service")</h3>
 
-<EditForm Model="service" OnValidSubmit="HandleSubmit">
-    <DataAnnotationsValidator />
-    <ValidationSummary />
+@if (!isAuthorized)
+{
+    <p>Unauthorized</p>
+}
+else
+{
+    <EditForm Model="service" OnValidSubmit="SaveService">
+        <div class="mb-3">
+            <label>Name</label>
+            <InputText @bind-Value="service.Name" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label>Duration</label>
+            <InputText @bind-Value="service.Duration" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label>Price</label>
+            <InputNumber @bind-Value="service.Price" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label>Description</label>
+            <InputTextArea @bind-Value="service.Description" class="form-control" />
+        </div>
 
-    <div class="form-group">
-        <label>Name</label>
-        <InputText @bind-Value="service.Name" class="form-control" />
-    </div>
-    <div class="form-group">
-        <label>Duration</label>
-        <InputText @bind-Value="service.Duration" class="form-control" />
-    </div>
-    <div class="form-group">
-        <label>Price</label>
-        <InputNumber @bind-Value="service.Price" class="form-control" />
-    </div>
-    <div class="form-group">
-        <label>Description</label>
-        <InputTextArea @bind-Value="service.Description" class="form-control" />
-    </div>
-
-    <button type="submit" class="btn primary">Save</button>
-</EditForm>
+        <button type="submit" class="btn btn-primary">Save</button>
+        <button type="button" class="btn btn-secondary" @onclick='() => Nav.NavigateTo("/admin")'>Cancel</button>
+    </EditForm>
+}
 
 @code {
-    [Parameter] public string Mode { get; set; } = "new";
-    [Parameter] public long? Id { get; set; }
-
+    [Parameter] public long Id { get; set; }
     private Service service = new();
+    private bool isAuthorized = false;
 
     protected override async Task OnInitializedAsync()
     {
-        if (Mode == "edit" && Id.HasValue)
+        var role = await Auth.GetUserRole();
+        if (role != "admin") return;
+        isAuthorized = true;
+
+        if (Id != 0)
         {
-            var allServices = await Supabase.GetServicesAsync();
-            service = allServices.First(s => s.Id == Id.Value);
+            var all = await Supabase.GetServicesAsync();
+            var found = all.FirstOrDefault(s => s.Id == Id);
+            if (found != null) service = found;
         }
     }
 
-    private async Task HandleSubmit()
+    private async Task SaveService()
     {
-        if (Mode == "new")
+        if (Id == 0)
+        {
             await Supabase.CreateServiceAsync(service);
+        }
         else
+        {
             await Supabase.UpdateServiceAsync(service);
-
+        }
         Nav.NavigateTo("/admin");
     }
 }

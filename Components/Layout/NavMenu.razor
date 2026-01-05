@@ -1,20 +1,57 @@
-﻿<nav>
-    <a href="/">Home</a>
-    <a href="/services">Services</a>
-    <a href="/contact">Contact</a>
-</nav>
+﻿@inject DMsite.Services.AuthService Auth
 
-<style>
-    nav {
-        display: flex;
-        gap: 1rem;
-        padding: 1rem;
-        background: #0078d4;
-    }
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">Physio Center</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
 
-        nav a {
-            color: white;
-            text-decoration: none;
-            font-weight: bold;
+<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    <nav class="flex-column">
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Αρχική
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="services">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Υπηρεσίες
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="announcements">
+                <span class="bi bi-megaphone-fill-nav-menu" aria-hidden="true"></span> Ανακοινώσεις
+            </NavLink>
+        </div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="contact">
+                <span class="bi bi-envelope-fill-nav-menu" aria-hidden="true"></span> Επικοινωνία
+            </NavLink>
+        </div>
+        @if (Auth.IsLoggedIn)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin">
+                    <span class="bi bi-gear-fill-nav-menu" aria-hidden="true"></span> Διαχείριση
+                </NavLink>
+            </div>
         }
-</style>
+    </nav>
+</div>
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+}

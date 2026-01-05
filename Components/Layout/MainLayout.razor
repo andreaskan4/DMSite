@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@inject DMsite.Services.AuthService Auth
+@inject NavigationManager Nav
 
 <div class="page">
     <div class="sidebar">
@@ -7,7 +9,16 @@
 
     <main>
         <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+            @if (Auth.IsLoggedIn)
+            {
+                <span class="me-3">Γεια σου, @(Auth.Session?.User?.Email ?? "User")!</span>
+                <button class="btn btn-link" @onclick="Logout">Αποσύνδεση</button>
+            }
+            else
+            {
+                <a href="login" class="me-3">Σύνδεση</a>
+                <a href="register">Εγγραφή</a>
+            }
         </div>
 
         <article class="content px-4">
@@ -16,8 +27,17 @@
     </main>
 </div>
 
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
-</div>
+@code {
+    private bool isLoaded = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.InitializeAsync();
+        isLoaded = true;
+    }
+    private void Logout()
+    {
+        Auth.Logout();
+        Nav.NavigateTo("/", forceLoad: true);
+    }
+}

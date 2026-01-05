@@ -1,34 +1,61 @@
 ﻿@page "/services/{Id:long}"
+@using DMsite.Models
+@using DMsite.Services
 @inject SupabaseService Supabase
+@inject NavigationManager Nav
 
-@if (service == null)
-{
-    <p>Loading service...</p>
-}
-else
-{
-    <h1>@service.Name</h1>
-
-    <p><strong>Duration:</strong> @service.Duration</p>
-    <p><strong>Price:</strong> @service.Price €</p>
-
-    @if (!string.IsNullOrWhiteSpace(service.Description))
+<div class="container mt-4">
+    @if (service == null)
     {
-        <p>@service.Description</p>
+        @if (isLoading)
+        {
+            <p>Φόρτωση υπηρεσίας...</p>
+        }
+        else
+        {
+            <div class="alert alert-warning">Η υπηρεσία δεν βρέθηκε.</div>
+            <button class="btn btn-primary" @onclick='() => Nav.NavigateTo("/services")'>Πίσω στις Υπηρεσίες</button>
+        }
     }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h2>@service.Name</h2>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h5>Διάρκεια: <span class="badge bg-info text-dark">@service.Duration</span></h5>
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <h4>Τιμή: <span class="badge bg-success">@service.Price €</span></h4>
+                    </div>
+                </div>
 
-    <a href="/services">← Back to Services</a>
-}
+                <hr />
+
+                <h5 class="mt-4">Περιγραφή</h5>
+                <p style="white-space: pre-line;">@service.Description</p>
+            </div>
+            <div class="card-footer">
+                <button class="btn btn-outline-secondary" @onclick='() => Nav.NavigateTo("/services")'>Πίσω</button>
+                <a href="contact" class="btn btn-primary float-end">Κλείσε Ραντεβού</a>
+            </div>
+        </div>
+    }
+</div>
 
 @code {
-    [Parameter]
-    public long Id { get; set; }
+    [Parameter] public long Id { get; set; }
 
     private Service? service;
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
         var services = await Supabase.GetServicesAsync();
         service = services.FirstOrDefault(s => s.Id == Id);
+        isLoading = false;
     }
 }

@@ -1,67 +1,211 @@
 ﻿@page "/admin"
+@using DMsite.Models
+@using DMsite.Services
 @inject AuthService Auth
 @inject SupabaseService Supabase
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
+<PageTitle>Admin Dashboard</PageTitle>
 
-<h1>Admin Dashboard</h1>
-
-@if (!isAuthorized)
+@if (isCheckingAuth)
 {
-    <p>You are not authorized to view this page.</p>
+    <div class="d-flex flex-column justify-content-center align-items-center" style="height: 60vh;">
+        <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h4 class="text-muted">Έλεγχος δικαιωμάτων...</h4>
+    </div>
 }
-else if (services == null)
+else if (!isAuthorized)
 {
-    <p>Loading services...</p>
+    <div class="container mt-5">
+        <div class="alert alert-danger shadow-sm">
+            <h4 class="alert-heading"><i class="bi bi-exclamation-triangle-fill me-2"></i>Δεν έχετε εξουσιοδότηση</h4>
+            <p>Δεν διαθέτετε δικαιώματα διαχειριστή για να δείτε αυτή τη σελίδα.</p>
+            <hr>
+            <button class="btn btn-danger" @onclick='() => Nav.NavigateTo("/")'>Επιστροφή στην Αρχική</button>
+            <button class="btn btn-outline-secondary ms-2" @onclick='() => Nav.NavigateTo("/login")'>Σύνδεση ως άλλος χρήστης</button>
+        </div>
+    </div>
 }
 else
 {
-    <button class="btn primary" @onclick="AddService">Add New Service</button>
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+            <h1><i class="bi bi-speedometer2 me-2"></i>Admin Dashboard</h1>
+            <span class="text-muted small">Logged in as: <strong>@Auth.Session?.User?.Email</strong></span>
+        </div>
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Duration</th>
-                <th>Price</th>
-                <th>Description</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var s in services)
-            {
-                <tr>
-                    <td>@s.Name</td>
-                    <td>@s.Duration</td>
-                    <td>@s.Price</td>
-                    <td>@s.Description</td>
-                    <td>
-                        <button class="btn secondary" @onclick="@(() => EditService(s))">Edit</button>
-                        <button class="btn danger" @onclick="@(() => DeleteService(s))">Delete</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+        @if (isLoadingData)
+        {
+            <div class="alert alert-info d-flex align-items-center">
+                <div class="spinner-border spinner-border-sm me-3" role="status"></div>
+                <span>Φόρτωση δεδομένων από τη βάση...</span>
+            </div>
+        }
+        else
+        {
+            <div class="card shadow-sm mb-5">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-grid-fill me-2"></i>Υπηρεσίες</h5>
+                    <button class="btn btn-light btn-sm text-primary fw-bold" @onclick="AddService">
+                        <i class="bi bi-plus-lg"></i> Προσθήκη
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    @if (services == null || services.Count == 0)
+                    {
+                        <div class="p-4 text-center text-muted">Δεν βρέθηκαν υπηρεσίες.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Όνομα</th>
+                                        <th>Διάρκεια</th>
+                                        <th>Τιμή</th>
+                                        <th>Περιγραφή</th>
+                                        <th style="width: 150px;">Ενέργειες</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var s in services)
+                                    {
+                                        <tr>
+                                            <td class="fw-bold">@s.Name</td>
+                                            <td>@s.Duration</td>
+                                            <td>@s.Price €</td>
+                                            <td class="text-muted small text-truncate" style="max-width: 200px;">@s.Description</td>
+                                            <td>
+                                                <button class="btn btn-outline-secondary btn-sm me-1" @onclick="@(() => EditService(s))" title="Επεξεργασία">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm" @onclick="@(() => DeleteService(s))" title="Διαγραφή">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-megaphone-fill me-2"></i>Ανακοινώσεις</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 mb-4 p-3 bg-light rounded border">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Τίτλος</label>
+                            <input class="form-control" @bind="newAnnouncement.Title" placeholder="Π.χ. Ωράριο Πάσχα" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Περιεχόμενο</label>
+                            <input class="form-control" @bind="newAnnouncement.Content" placeholder="Γράψτε το μήνυμα..." />
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button class="btn btn-success w-100" @onclick="AddAnnouncement">
+                                <i class="bi bi-send me-1"></i> Δημοσίευση
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (announcements == null || announcements.Count == 0)
+                    {
+                        <p class="text-muted text-center">Δεν υπάρχουν ενεργές ανακοινώσεις.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 15%">Ημερομηνία</th>
+                                    <th style="width: 25%">Τίτλος</th>
+                                    <th>Περιεχόμενο</th>
+                                    <th style="width: 10%">Ενέργεια</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in announcements)
+                                {
+                                    <tr>
+                                        <td>@a.CreatedAt.ToLocalTime().ToShortDateString()</td>
+                                        <td class="fw-bold text-primary">@a.Title</td>
+                                        <td>@a.Content</td>
+                                        <td>
+                                            <button class="btn btn-danger btn-sm w-100" @onclick="@(() => DeleteAnnouncement(a))">
+                                                <i class="bi bi-trash"></i> Διαγραφή
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        }
+    </div>
 }
 
 @code {
+    private bool isCheckingAuth = true;
+    private bool isLoadingData = false;
     private bool isAuthorized = false;
+
     private List<Service>? services;
+    private List<Announcement>? announcements;
+    private Announcement newAnnouncement = new();
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        var role = await Auth.GetUserRole();
-        if (role != "admin")
+        if (firstRender)
         {
-            isAuthorized = false;
-            return;
-        }
-        isAuthorized = true;
+            await Auth.InitializeAsync();
+            var role = await Auth.GetUserRole();
 
-        services = await Supabase.GetServicesAsync();
+            if (role == "admin")
+            {
+                isAuthorized = true;
+                isCheckingAuth = false;
+                isLoadingData = true;
+                StateHasChanged();
+
+                await LoadData();
+
+                isLoadingData = false;
+                StateHasChanged();
+            }
+            else
+            {
+                isAuthorized = false;
+                isCheckingAuth = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            var t1 = Supabase.GetServicesAsync();
+            var t2 = Supabase.GetAnnouncementsAsync();
+
+            await Task.WhenAll(t1, t2);
+
+            services = await t1;
+            announcements = await t2;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading data: {ex.Message}");
+        }
     }
 
     private void AddService()
@@ -76,10 +220,34 @@ else
 
     private async Task DeleteService(Service s)
     {
-        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Delete {s.Name}?");
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Είστε σίγουροι για τη διαγραφή της υπηρεσίας '{s.Name}';");
         if (!confirmed) return;
 
         await Supabase.DeleteServiceAsync(s.Id);
         services = await Supabase.GetServicesAsync();
+    }
+
+    private async Task AddAnnouncement()
+    {
+        if (string.IsNullOrWhiteSpace(newAnnouncement.Title) || string.IsNullOrWhiteSpace(newAnnouncement.Content))
+        {
+            await JS.InvokeVoidAsync("alert", "Παρακαλώ συμπληρώστε τίτλο και περιεχόμενο.");
+            return;
+        }
+
+        newAnnouncement.CreatedAt = DateTime.UtcNow;
+        await Supabase.CreateAnnouncementAsync(newAnnouncement);
+
+        newAnnouncement = new();
+        announcements = await Supabase.GetAnnouncementsAsync();
+    }
+
+    private async Task DeleteAnnouncement(Announcement a)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", "Διαγραφή αυτής της ανακοίνωσης;");
+        if (!confirmed) return;
+
+        await Supabase.DeleteAnnouncementAsync(a.Id);
+        announcements = await Supabase.GetAnnouncementsAsync();
     }
 }

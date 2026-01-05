@@ -1,4 +1,6 @@
 ﻿using System.Net.Http.Json;
+using System.Text.Json;
+using Microsoft.JSInterop;
 using DMsite.Models;
 
 namespace DMsite.Services;
@@ -7,26 +9,46 @@ public class AuthService
 {
     private readonly HttpClient _http;
     private readonly IConfiguration _config;
+    private readonly IJSRuntime _js;
 
     public SupabaseAuthResponse? Session { get; private set; }
     public bool IsLoggedIn => Session != null;
 
-    public AuthService(IHttpClientFactory factory, IConfiguration config)
+    // Προσθήκη μνήμης (Cache) για τον ρόλο
+    private string? _cachedRole;
+
+    public AuthService(IHttpClientFactory factory, IConfiguration config, IJSRuntime js)
     {
-        _http = factory.CreateClient();
+        _http = factory.CreateClient("Supabase");
         _config = config;
+        _js = js;
     }
 
-    // Login
-    public async Task<bool> Login(string email, string password)
+    public async Task InitializeAsync()
+    {
+        // Αν έχουμε ήδη session στη μνήμη, δεν χρειάζεται να διαβάσουμε το LocalStorage
+        if (Session != null) return;
+
+        try
+        {
+            var json = await _js.InvokeAsync<string>("localStorage.getItem", "supabase.session");
+            if (!string.IsNullOrEmpty(json))
+            {
+                Session = JsonSerializer.Deserialize<SupabaseAuthResponse>(json);
+            }
+        }
+        catch { }
+    }
+
+    public async Task<(bool IsSuccess, string? Error)> Login(string email, string password)
     {
         try
         {
+            // Καθαρισμός παλιάς μνήμης πριν το login
+            _cachedRole = null;
+
             var url = $"{_config["Supabase:Url"]}/auth/v1/token?grant_type=password";
-
             var request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Headers.Add("apikey", _config["Supabase:AnonKey"]);
-            request.Headers.Add("Authorization", $"Bearer {_config["Supabase:AnonKey"]}");
             request.Content = JsonContent.Create(new { email, password });
 
             var response = await _http.SendAsync(request);
@@ -34,111 +56,129 @@ public class AuthService
 
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"Supabase login failed: {content}");
-                return false;
+                return (false, ExtractError(content) ?? "Αποτυχία σύνδεσης.");
             }
 
             var authResponse = await response.Content.ReadFromJsonAsync<SupabaseAuthResponse>();
-
-            if (authResponse?.AccessToken == null)
-            {
-                Console.WriteLine($"Supabase login returned no access token: {content}");
-                return false;
-            }
+            if (authResponse?.AccessToken == null) return (false, "Δεν ελήφθη token.");
 
             Session = authResponse;
-            return true;
+            await SaveSession();
+
+            return (true, null);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Exception in Login: {ex.Message}");
-            return false;
+            return (false, ex.Message);
         }
     }
 
-
-    // Register + create customer profile
-    public async Task<bool> Register(string email, string password, string fullName)
+    public async Task<(bool IsSuccess, string? Error)> Register(string email, string password, string fullName)
     {
         try
         {
-            var url = $"{_config["Supabase:Url"]}/auth/v1/signup";
+            _cachedRole = null; // Reset cache
 
+            var url = $"{_config["Supabase:Url"]}/auth/v1/signup";
             var request = new HttpRequestMessage(HttpMethod.Post, url);
-            request.Headers.Add("apikey", _config["Supabase:AnonKey"]);
-            request.Content = JsonContent.Create(new { email, password });
+
+            var payload = new
+            {
+                email = email,
+                password = password,
+                data = new { full_name = fullName }
+            };
+            request.Content = JsonContent.Create(payload);
 
             var response = await _http.SendAsync(request);
             var content = await response.Content.ReadAsStringAsync();
 
             if (!response.IsSuccessStatusCode)
             {
-                Console.WriteLine($"Supabase signup failed: {content}");
-                return false;
+                return (false, ExtractError(content) ?? "Αποτυχία εγγραφής.");
             }
 
             var authResponse = await response.Content.ReadFromJsonAsync<SupabaseAuthResponse>();
 
-            if (authResponse?.User == null)
+            if (authResponse?.User != null)
             {
-                Console.WriteLine($"Supabase signup returned no user. Response: {content}");
-                return false;
+                if (authResponse.AccessToken != null)
+                {
+                    Session = authResponse;
+                    await SaveSession();
+                }
+                return (true, null);
             }
 
-            // Store session in memory (optional)
-            Session = authResponse;
-
-            // Insert profile with default role = customer
-            var profileUrl = $"{_config["Supabase:Url"]}/rest/v1/profiles";
-            var profileReq = new HttpRequestMessage(HttpMethod.Post, profileUrl);
-            profileReq.Headers.Add("apikey", _config["Supabase:AnonKey"]);
-            profileReq.Headers.Add("Authorization", $"Bearer {_config["Supabase:AnonKey"]}");
-            profileReq.Content = JsonContent.Create(new
-            {
-                id = authResponse.User.Id,
-                full_name = fullName,
-                role = "customer"
-            });
-
-            var profileResp = await _http.SendAsync(profileReq);
-            if (!profileResp.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"Failed to create profile: {await profileResp.Content.ReadAsStringAsync()}");
-            }
-
-            return true;
+            return (false, "Άγνωστο σφάλμα εγγραφής.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Exception in Register: {ex.Message}");
-            return false;
+            return (false, ex.Message);
         }
+    }
+
+    public async Task Logout()
+    {
+        Session = null;
+        _cachedRole = null; // Καθαρισμός μνήμης ρόλου
+        await _js.InvokeVoidAsync("localStorage.removeItem", "supabase.session");
     }
 
     public async Task<string?> GetUserRole()
     {
+        // 1. Έλεγχος αν το ξέρουμε ήδη (Εδώ κερδίζουμε την ταχύτητα!)
+        if (_cachedRole != null) return _cachedRole;
+
+        if (!IsLoggedIn) await InitializeAsync();
         if (!IsLoggedIn) return null;
 
-        var userId = Session!.User.Id;
-        var url = $"{_config["Supabase:Url"]}/rest/v1/profiles?id=eq.{userId}";
+        try
+        {
+            var userId = Session!.User.Id;
+            var url = $"profiles?id=eq.{userId}&select=role";
 
-        var request = new HttpRequestMessage(HttpMethod.Get, url);
-        request.Headers.Add("apikey", _config["Supabase:AnonKey"]);
-        request.Headers.Add("Authorization", $"Bearer {_config["Supabase:AnonKey"]}");
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("Authorization", $"Bearer {Session.AccessToken}");
 
-        var response = await _http.SendAsync(request);
-        if (!response.IsSuccessStatusCode) return null;
+            var response = await _http.SendAsync(request);
+            if (!response.IsSuccessStatusCode) return null;
 
-        var profiles = await response.Content.ReadFromJsonAsync<List<Profile>>();
-        return profiles?.FirstOrDefault()?.Role;
+            var profiles = await response.Content.ReadFromJsonAsync<List<Profile>>();
+            var role = profiles?.FirstOrDefault()?.Role;
+
+            // 2. Αποθήκευση στη μνήμη για την επόμενη φορά
+            if (!string.IsNullOrEmpty(role))
+            {
+                _cachedRole = role;
+            }
+
+            return role;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
-    public class Profile
+    private async Task SaveSession()
     {
-        public string Id { get; set; } = "";
-        public string Full_Name { get; set; } = "";
-        public string Role { get; set; } = "";
+        var json = JsonSerializer.Serialize(Session);
+        await _js.InvokeVoidAsync("localStorage.setItem", "supabase.session", json);
     }
 
-    public void Logout() => Session = null;
+    private string? ExtractError(string jsonContent)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(jsonContent);
+            if (doc.RootElement.TryGetProperty("msg", out var msg)) return msg.GetString();
+            if (doc.RootElement.TryGetProperty("error_description", out var desc)) return desc.GetString();
+            if (doc.RootElement.TryGetProperty("message", out var message)) return message.GetString();
+        }
+        catch { }
+        return jsonContent;
+    }
+
+    public class Profile { public string Role { get; set; } = ""; }
 }
