@@ -17,24 +17,20 @@ public class SupabaseService
     private HttpRequestMessage CreateRequest(HttpMethod method, string uri, object? content = null)
     {
         var request = new HttpRequestMessage(method, uri);
+        if (content != null) request.Content = JsonContent.Create(content);
 
-        if (content != null)
-        {
-            request.Content = JsonContent.Create(content);
-        }
-
+        // Προσθήκη Token Διαχειριστή (Admin)
         if (_auth.Session?.AccessToken != null)
         {
             request.Headers.Add("Authorization", $"Bearer {_auth.Session.AccessToken}");
         }
-
         return request;
     }
 
+    // --- Services ---
     public async Task<List<Service>> GetServicesAsync()
     {
-        return await _http.GetFromJsonAsync<List<Service>>("services?order=id")
-               ?? new List<Service>();
+        return await _http.GetFromJsonAsync<List<Service>>("services?order=id") ?? new List<Service>();
     }
 
     public async Task CreateServiceAsync(Service s)
@@ -58,9 +54,10 @@ public class SupabaseService
         response.EnsureSuccessStatusCode();
     }
 
+    // --- Announcements ---
     public async Task<List<Announcement>> GetAnnouncementsAsync()
     {
-        return await _http.GetFromJsonAsync<List<Announcement>>("announcements?order=CreatedAt.desc")
+        return await _http.GetFromJsonAsync<List<Announcement>>("announcements?order=created_at.desc")
                ?? new List<Announcement>();
     }
 

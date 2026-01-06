@@ -6,15 +6,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// Ρυθμίσεις Supabase
 var supabaseUrl = builder.Configuration["Supabase:Url"];
 var supabaseKey = builder.Configuration["Supabase:AnonKey"];
 
 builder.Services.AddHttpClient("Supabase", client =>
 {
     client.BaseAddress = new Uri($"{supabaseUrl}/rest/v1/");
+    // ΜΟΝΟ το apikey εδώ. Τίποτα άλλο.
     client.DefaultRequestHeaders.Add("apikey", supabaseKey);
     client.DefaultRequestHeaders.Add("Accept", "application/json");
-
 });
 
 builder.Services.AddScoped<SupabaseService>();
